@@ -41,6 +41,9 @@ func (node *Node) Markdown() string {
 			-1,
 		)
 	}
+	if node.Tag == "code" && node.Attributes["class"] != "" {
+		return fmt.Sprintf(`<%s class="%s">%s</%s>`, node.Tag, node.Attributes["class"], node.Text, node.Tag)
+	}
 	switch node.Tag {
 	case "a":
 		return fmt.Sprintf("[%s](%s)", node.Text, node.Attributes["href"])
@@ -56,6 +59,9 @@ func (node *Node) Markdown() string {
 		return "\n---\n"
 	case "blockquote":
 		return fmt.Sprintf("\n```\n%s\n```\n", node.Text)
+	case "h1", "h2", "h3", "h4", "h5", "h6":
+		repeat := int(node.Tag[len(node.Tag)-1]) - 48
+		return fmt.Sprintf("%s %s", strings.Repeat("#", repeat), node.Text)
 	default:
 		if node.Tag != "" && node.Tag != "root" {
 			return fmt.Sprintf("<%s>%s</%s>", node.Tag, node.Text, node.Tag)
