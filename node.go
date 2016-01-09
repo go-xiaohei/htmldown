@@ -1,4 +1,4 @@
-package ng
+package htmldown
 
 import (
 	"fmt"
