@@ -108,6 +108,15 @@ type (
 	BlockquoteNode struct{ baseNode }
 	// CodeNode is used to <code>
 	CodeNode struct{ baseNode }
+	// PreNode is used to <pre>
+	PreNode struct {
+		baseNode
+		closePrint bool
+	}
+	// HeaderNode is used to <h1-6>
+	HeaderNode struct{ baseNode }
+	// StrongNode is used to <strong> and <em>
+	StrongNode struct{ baseNode }
 )
 
 // Markdown renders ParagraphNode with \n
@@ -194,17 +203,60 @@ func (bn *BlockquoteNode) New(t html.Token, parent Node) Node {
 // Markdown renders CodeNode as <code>text</code>
 // if element class exist, render as <code class="class">text</code>
 func (cn *CodeNode) Markdown() string {
-	class := cn.attributes["class"]
-	if class != "" {
-		return fmt.Sprintf(`<code class="%s">%s</code>`, class, cn.baseNode.Markdown())
+	if cn.Parent().Tag() == "pre" {
+		cn.Parent().(*PreNode).closePrint = true // close <pre> print
+		classes := strings.Split(cn.attributes["class"], " ")
+		for _, class := range classes {
+			if strings.HasPrefix(class, "language") {
+				return fmt.Sprintf("```%s\n%s\n```\n", strings.TrimPrefix(class, "language-"), cn.baseNode.Markdown())
+			}
+		}
+		return fmt.Sprintf("```\n%s\n```\n", cn.baseNode.Markdown())
 	}
-	return fmt.Sprintf("<code>%s</code>", cn.baseNode.Markdown())
+	return fmt.Sprintf("`%s`", cn.baseNode.Markdown())
 }
 
 // New returns new CodeNode
 func (cn *CodeNode) New(t html.Token, parent Node) Node {
 	bs := cn.baseNode.New(t, parent)
 	return &CodeNode{
+		baseNode: *(bs.(*baseNode)),
+	}
+}
+
+func (pn *PreNode) Markdown() string {
+	if pn.closePrint {
+		return ""
+	}
+	return pn.baseNode.Markdown()
+}
+
+func (pn *PreNode) New(t html.Token, parent Node) Node {
+	bs := pn.baseNode.New(t, parent)
+	return &PreNode{
+		baseNode: *(bs.(*baseNode)),
+	}
+}
+
+func (hn *HeaderNode) Markdown() string {
+	repeat := int(hn.Tag()[len(hn.Tag())-1]) - 48
+	return strings.Repeat("#", repeat) + " " + hn.baseNode.Markdown()
+}
+
+func (hn *HeaderNode) New(t html.Token, parent Node) Node {
+	bs := hn.baseNode.New(t, parent)
+	return &HeaderNode{
+		baseNode: *(bs.(*baseNode)),
+	}
+}
+
+func (sn *StrongNode) Markdown() string {
+	return fmt.Sprintf("**%s**", sn.baseNode.Markdown())
+}
+
+func (sn *StrongNode) New(t html.Token, parent Node) Node {
+	bs := sn.baseNode.New(t, parent)
+	return &StrongNode{
 		baseNode: *(bs.(*baseNode)),
 	}
 }
